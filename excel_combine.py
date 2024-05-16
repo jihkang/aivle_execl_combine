@@ -9,11 +9,11 @@ import openai
 
 
 warnings.filterwarnings('ignore')
-remove_header = ['번호', '상태', '본부', '반', '교육생', '교육상태', '검토담당자', '검토일시']
+remove_header = ['번호', '상태', '챗GPT 문의내용']
 
 
-def get_course(x):
-	ind = pd.read_excel('3기 과정 목록.xlsx', header=1, sheet_name=None)
+def get_course(x, course_name):
+	ind = pd.read_excel(course_name, header=1, sheet_name=None)
 	for key in ind.keys():
 		ind[key] = ind[key][['시작일자', '종료일자', '과정명']][:24]
 	data = ind[(ind['시작일자'] <= x)]['과정명'].tolist()
@@ -68,18 +68,19 @@ def readExcel(rdata):
 				columns=remove_header,
 				axis=1
 			)
-			excel_read[key].rename(columns={'답변': '튜터 답변'}, inplace=True)
 			excel_read[key].insert(
 				loc=4,
 				column='과목명',
-				value=value[1],
+				value=value[1] if value[0] else get_course(
+					excel_read[key]['문의일자'][0],
+					'과정일정.xlsx'
+				),
 			)
-			excel_read[key]['챗GPT 문의내용'] = excel_read[key]["문의내용"]
 			excel_read[key]['챗GPT답변'] = excel_read[key]['답변 사용 가능 여부'] = excel_read[key]['비고'] = ""
 			response = openai.Completion.create(
                     engine="gpt-3.5-turbo-instruct",
-                    prompt=f"please answer each question: {excel_read[key]['챗GPT 문의내용']}",
-                    max_tokens=1000
+                    prompt=f"please answer each question: {excel_read[key]['문의내용']}",
+                    max_tokens=3000
                 )
 			exce_read[key]['챗GPT 답변'] = response.choices[0].text.strip()
 			if data[value[0]] is None:
@@ -90,6 +91,7 @@ def readExcel(rdata):
 
 
 def main():
+	readExcel()
 	test = openpyxl.load_workbook('dist/result.xlsx')
 	for i in test.sheetnames:
 		for row in test[i]:
