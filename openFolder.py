@@ -6,7 +6,7 @@ import os
 
 
 def getPath(func):
-    def wrapper(*args, **kwargs):
+    def wrapper(*args):
         if len(args) > 0:
             path = args[0]
         else:
